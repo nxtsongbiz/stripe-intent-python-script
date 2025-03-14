@@ -20,26 +20,37 @@ def setup_intent():
         phone = data.get("phone_number")
         song_name = data.get("song_name")
         timestamp = data.get("timestamp")
-
-        # Create customer (optional fields passed as metadata)
+        request_fee_cents = 50  # $0.50
+        bid_amount = data.get("bid_amount")  # e.g., $8.00 if passed in
+        #convert bid amount to cents
+        bid_amount_cents = int(round(bid_amount * 100))
+        # Step 1: Create Stripe Customer
         customer = stripe.Customer.create(
-            metadata={
-                "request_id": req_id,
-                "song_name": song_name,
-                "timestamp": timestamp
-            },
-            phone=phone
+                request_id=req_id,
+                song_name=song_name,
+                timestamp=timestamp,
+                phone_number=phone
         )
 
-        # Create SetupIntent
+        # Step 2: Create SetupIntent to save card
         setup_intent = stripe.SetupIntent.create(
             customer=customer.id,
-            payment_method_types=['card']
+            payment_method_types=["cashapp", "google_pay", "apple_pay", "venmo"]
+        )
+        
+        # Step 3: Create PaymentIntent to charge request fee
+        fee_intent = stripe.PaymentIntent.create(
+            amount=request_fee_cents,
+            currency='usd',
+            customer=customer.id,
+            payment_method_types=["cashapp", "google_pay", "apple_pay", "venmo"]
         )
 
         return jsonify({
+            "setup_intent_client_secret": setup_intent.client_secret,
+            "fee_payment_intent_client_secret": fee_intent.client_secret,
             "customer_id": customer.id,
-            "setup_intent_client_secret": setup_intent.client_secret
+            "bid_amount": bid_amount_cents
         })
 
     except Exception as e:
