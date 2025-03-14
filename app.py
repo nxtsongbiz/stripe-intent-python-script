@@ -41,7 +41,7 @@ def setup_intent():
         # Step 2: Create SetupIntent to save card
         setup_intent = stripe.SetupIntent.create(
             customer=customer.id,
-            payment_method_types=["cashapp", "google_pay", "apple_pay", "venmo"]
+            payment_method_types=["card","cashapp"]
         )
         
         # Step 3: Create PaymentIntent to charge request fee
@@ -49,7 +49,7 @@ def setup_intent():
             amount=request_fee_cents,
             currency='usd',
             customer=customer.id,
-            payment_method_types=["cashapp", "google_pay", "apple_pay", "venmo"]
+            payment_method_types=["card","cashapp"]
         )
 
         return jsonify({
