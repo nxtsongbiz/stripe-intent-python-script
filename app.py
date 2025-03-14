@@ -20,16 +20,19 @@ def setup_intent():
         phone = data.get("phone_number")
         song_name = data.get("song_name")
         timestamp = data.get("timestamp")
-        request_fee_cents = 50  # $0.50
         bid_amount = data.get("bid_amount")  # e.g., $8.00 if passed in
+        
+        request_fee_cents = 50  # $0.50
+        #convert json from string to float
+        amount_float = float(bid_amount)
         #convert bid amount to cents
-        bid_amount_cents = int(round(bid_amount * 100))
+        bid_amount_cents = int(round(amount_float * 100))
         # Step 1: Create Stripe Customer
         customer = stripe.Customer.create(
-                request_id=req_id,
-                song_name=song_name,
-                timestamp=timestamp,
-                phone_number=phone
+            request_id=req_id,
+            song_name=song_name,
+            timestamp=timestamp,
+            phone_number=phone
         )
 
         # Step 2: Create SetupIntent to save card
