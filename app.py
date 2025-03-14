@@ -21,12 +21,13 @@ def setup_intent():
         song_name = data.get("song_name")
         timestamp = data.get("timestamp")
         bid_amount = data.get("bid_amount")  # e.g., $8.00 if passed in
-        
+        print("Received bid_amount:", bid_amount)
+        print("Type of bid_amount:", type(bid_amount))
         request_fee_cents = 50  # $0.50
         #convert json from string to float
-        amount_float = float(bid_amount)
+        bid_amount_float = float(bid_amount)
         #convert bid amount to cents
-        bid_amount_cents = int(round(amount_float * 100))
+        bid_amount_cents = int(round(bid_amount_float * 100))
         # Step 1: Create Stripe Customer
         customer = stripe.Customer.create(
             request_id=req_id,
