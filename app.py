@@ -28,6 +28,7 @@ def setup_intent():
         bid_amount_float = float(bid_amount)
         #convert bid amount to cents
         bid_amount_cents = int(round(bid_amount_float * 100))
+        print("The value in bid amount cents is:", bid_amount_cents)
         # Step 1: Create Stripe Customer
         customer = stripe.Customer.create(
             request_id=req_id,
