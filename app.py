@@ -17,7 +17,7 @@ def setup_intent():
         # Parse JSON payload from Zapier/Form
         data = request.json
         req_id = data.get("request_id")
-        phone = data.get("phone_number")
+        email = data.get("email")
         song_name = data.get("song_name")
         timestamp = data.get("timestamp")
         bid_amount = data.get("bid_amount")  # e.g., $8.00 if passed in
@@ -30,7 +30,7 @@ def setup_intent():
         
         # Step 1: Create Stripe Customer
         customer = stripe.Customer.create(
-            phone=phone,  # Optional — only if you want to show this in Stripe dashboard
+            email=email,  # Optional — only if you want to show this in Stripe dashboard
             metadata={
                 "request_id": req_id,
                 "song_name": song_name,
