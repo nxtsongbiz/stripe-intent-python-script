@@ -67,5 +67,46 @@ def setup_intent():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+#once bid is accepted customer is charged full amount
+@app.route("/charge-bid", methods=["POST"])
+def charge_bid():
+    try:
+        data = request.json
+        customer_id = data.get("stripe_customer_id")
+        payment_method = data.get("bid_client_secret")  # From SetupIntent
+        bid_amount= data.get("bid_amount")
+        dj_stripe_connect_id = data.get("stripe_account_id")
+        request_id = data.get("request_id")
+        #convert json from string to float
+        bid_amount_float = float(bid_amount)
+        #convert bid amount to cents
+        bid_amount_cents = int(round(bid_amount_float * 100))
+
+        # Calculate application fee (20% of bid)
+        app_fee = int(round(bid_amount_cents * 0.20))
+
+        # Create the PaymentIntent to charge the saved card
+        intent = stripe.PaymentIntent.create(
+            amount=bid_amount_cents,
+            currency="usd",
+            customer=customer_id,
+            payment_method=payment_method,
+            off_session=True,
+            confirm=True,
+            description=f"Song request charge for request_id {request_id}",
+            application_fee_amount=app_fee,
+            transfer_data={
+                "destination": dj_stripe_connect_id
+            }
+        )
+
+        return jsonify({"status": "success", "charge_id": intent.id})
+
+    except stripe.error.CardError as e:
+        return jsonify({"error": f"Card declined: {e.user_message}"}), 402
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
