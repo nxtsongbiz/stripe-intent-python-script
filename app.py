@@ -67,6 +67,25 @@ def setup_intent():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/store-payment-method", methods=["POST"])
+def store_payment_method():
+    try:
+        data = request.json
+        request_id = data.get("request_id")
+        customer_id = data.get("customer_id")
+        payment_method_id = data.get("payment_method_id")
+
+        # TODO: Replace this with your logic to store values in Airtable or a database
+        print("✅ Received payment method for storage:")
+        print("Request ID:", request_id)
+        print("Customer ID:", customer_id)
+        print("Payment Method ID:", payment_method_id)
+
+        return jsonify({"status": "success"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 #once bid is accepted customer is charged full amount
 @app.route("/charge-bid", methods=["POST"])
 def charge_bid():
