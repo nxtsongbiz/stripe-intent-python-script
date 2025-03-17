@@ -73,7 +73,7 @@ def charge_bid():
     try:
         data = request.json
         customer_id = data.get("stripe_customer_id")
-        payment_method = data.get("bid_client_secret")  # From SetupIntent
+        bid_client_secret = data.get("bid_client_secret")  # From SetupIntent
         bid_amount= data.get("bid_amount")
         dj_stripe_connect_id = data.get("stripe_account_id")
         request_id = data.get("request_id")
@@ -84,13 +84,17 @@ def charge_bid():
 
         # Calculate application fee (20% of bid)
         app_fee = int(round(bid_amount_cents * 0.20))
+        #get payment method id from setup intent (bid client secret)
+        setup_intent = stripe.SetupIntent.retrieve(bid_client_secret)
+        payment_method_id = setup_intent.payment_method
+
 
         # Create the PaymentIntent to charge the saved card
         intent = stripe.PaymentIntent.create(
             amount=bid_amount_cents,
             currency="usd",
             customer=customer_id,
-            payment_method=payment_method,
+            payment_method=payment_method_id,
             off_session=True,
             confirm=True,
             description=f"Song request charge for request_id {request_id}",
