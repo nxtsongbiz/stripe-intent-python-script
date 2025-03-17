@@ -84,10 +84,11 @@ def charge_bid():
 
         # Calculate application fee (20% of bid)
         app_fee = int(round(bid_amount_cents * 0.20))
-        #get payment method id from setup intent (bid client secret)
-        setup_intent = stripe.SetupIntent.retrieve(bid_client_secret)
+        # ✅ Extract SetupIntent ID from client_secret
+        setup_intent_id = bid_client_secret.split("_secret")[0]
+        # ✅ Retrieve SetupIntent to get payment_method_id
+        setup_intent = stripe.SetupIntent.retrieve(setup_intent_id)
         payment_method_id = setup_intent.payment_method
-
 
         # Create the PaymentIntent to charge the saved card
         intent = stripe.PaymentIntent.create(
