@@ -21,6 +21,7 @@ def setup_intent():
         song_name = data.get("song_name")
         timestamp = data.get("timestamp")
         bid_amount = data.get("bid_amount")  # e.g., $8.00 if passed in
+        dj_stripe_connect_id = data.get("stripe_account_id")
         request_fee_cents = 50  # $0.50
         #convert json from string to float
         bid_amount_float = float(bid_amount)
@@ -49,7 +50,11 @@ def setup_intent():
             amount=request_fee_cents,
             currency='usd',
             customer=customer.id,
-            payment_method_types=["card","cashapp"]
+            payment_method_types=["card","cashapp"],
+            application_fee_amount=int(round(request_fee_cents * 0.20)),  # 20% of 50 cents = 10 cents
+            transfer_data={
+                "destination":  dj_stripe_connect_id # <-- You must pass DJ's Connect account ID
+            }
         )
 
         return jsonify({
