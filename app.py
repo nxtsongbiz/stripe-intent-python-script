@@ -88,6 +88,7 @@ def charge_bid():
         setup_intent_id = bid_client_secret.split("_secret")[0]
         # ✅ Retrieve SetupIntent to get payment_method_id
         setup_intent = stripe.SetupIntent.retrieve(setup_intent_id)
+        print("Retrieved SetupIntent:", setup_intent)
         payment_method_id = setup_intent.payment_method
 
         # Create the PaymentIntent to charge the saved card
