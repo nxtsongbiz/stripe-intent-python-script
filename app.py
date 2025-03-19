@@ -44,7 +44,6 @@ def setup_intent():
             amount=request_fee_cents,
             currency='usd',
             customer=customer.id,
-            payment_method_types=["card","cashapp"],
             application_fee_amount=int(round(request_fee_cents * 0.20)), # 20% of 50 cents = 10 cents
             automatic_payment_methods={"enabled": True},
             setup_future_usage="off_session",  # ← THIS SAVES THE CARD TOO
