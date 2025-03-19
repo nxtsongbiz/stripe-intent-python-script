@@ -39,26 +39,21 @@ def setup_intent():
             }
         )
 
-        # Step 2: Create SetupIntent to save card
-        setup_intent = stripe.SetupIntent.create(
-            customer=customer.id,
-            payment_method_types=["card","cashapp"]
-        )
-        
         # Step 3: Create PaymentIntent to charge request fee
         fee_intent = stripe.PaymentIntent.create(
             amount=request_fee_cents,
             currency='usd',
             customer=customer.id,
             payment_method_types=["card","cashapp"],
-            application_fee_amount=int(round(request_fee_cents * 0.20)),  # 20% of 50 cents = 10 cents
+            application_fee_amount=int(round(request_fee_cents * 0.20)), # 20% of 50 cents = 10 cents
+            automatic_payment_methods={"enabled": True},
+            setup_future_usage="off_session",  # ← THIS SAVES THE CARD TOO
             transfer_data={
                 "destination":  dj_stripe_connect_id # <-- You must pass DJ's Connect account ID
             }
         )
 
         return jsonify({
-            "setup_intent_client_secret": setup_intent.client_secret,
             "fee_payment_intent_client_secret": fee_intent.client_secret,
             "customer_id": customer.id,
             "bid_amount": bid_amount_cents
