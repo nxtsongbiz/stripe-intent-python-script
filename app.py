@@ -124,50 +124,39 @@ def store_payment_method():
         return jsonify({"error": str(e)}), 500
 
 #once bid is accepted customer is charged full amount
-@app.route("/charge-bid", methods=["POST"])
-def charge_bid():
+@app.route('/charge-customer', methods=['POST'])
+def charge_customer():
+    data = request.json
+    customer_id = data.get('customer_id')
+    payment_method_id = data.get('bid_payment_method_id')
+    bid_amount = data.get('bid_amount')  # in cents
+    request_id = data.get('request_id')
+    
+     #convert json from string to float
+    bid_amount_float = float(bid_amount)
+    #convert bid amount to cents
+    bid_amount_cents = int(round(bid_amount_float * 100))
+
+    if not all([customer_id, payment_method_id,bid_amount_cents]):
+        return jsonify({'error': 'Missing data'}), 400
+
     try:
-        data = request.json
-        customer_id = data.get("stripe_customer_id")
-        bid_client_secret = data.get("bid_client_secret")  # From SetupIntent
-        bid_amount= data.get("bid_amount")
-        dj_stripe_connect_id = data.get("stripe_account_id")
-        request_id = data.get("request_id")
-        #convert json from string to float
-        bid_amount_float = float(bid_amount)
-        #convert bid amount to cents
-        bid_amount_cents = int(round(bid_amount_float * 100))
-
-        # Calculate application fee (20% of bid)
-        app_fee = int(round(bid_amount_cents * 0.20))
-        # ✅ Extract SetupIntent ID from client_secret
-        setup_intent_id = bid_client_secret.split("_secret")[0]
-        # ✅ Retrieve SetupIntent to get payment_method_id
-        setup_intent = stripe.SetupIntent.retrieve(setup_intent_id)
-        print("Retrieved SetupIntent:", setup_intent)
-        payment_method_id = setup_intent.payment_method
-
-        # Create the PaymentIntent to charge the saved card
-        intent = stripe.PaymentIntent.create(
+        # Create the charge
+        payment_intent = stripe.PaymentIntent.create(
             amount=bid_amount_cents,
-            currency="usd",
+            currency='usd',
             customer=customer_id,
             payment_method=payment_method_id,
             off_session=True,
             confirm=True,
-            description=f"Song request charge for request_id {request_id}",
-            application_fee_amount=app_fee,
-            transfer_data={
-                "destination": dj_stripe_connect_id
-            }
+            metadata={'request_id': request_id}
         )
-
-        return jsonify({"status": "success", "charge_id": intent.id})
-
+        return jsonify({'status': 'success', 'payment_intent': payment_intent.id})
     except stripe.error.CardError as e:
-        return jsonify({"error": f"Card declined: {e.user_message}"}), 402
+        return jsonify({'status': 'failed', 'error': str(e)}), 402
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({'status': 'failed', 'error': str(e)}), 500
+
 
 
 if __name__ == "__main__":
