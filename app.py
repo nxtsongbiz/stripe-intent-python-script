@@ -90,8 +90,7 @@ def start_checkout():
             }],
             customer=customer.id,
             metadata={
-                "request_id": request_id,
-                "full_bid_amount": bid_amount
+                "request_id": request_id
             },
             setup_future_usage="off_session",  # Save card for future billing
             success_url="https://tally.so/r/mev0Qe",
