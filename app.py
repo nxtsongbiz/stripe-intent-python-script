@@ -61,6 +61,48 @@ def setup_intent():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/start-checkout', methods=['GET'])
+def start_checkout():
+    request_id = request.args.get('request_id')
+
+    if not request_id:
+        return jsonify({"error": "Missing request_id"}), 400
+
+    try:
+        # Create a Stripe customer and attach metadata
+        customer = stripe.Customer.create(
+            metadata={
+                "request_id": request_id
+            }
+        )
+
+        # Create a Checkout Session for the bid fee (e.g., $0.50)
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="payment",
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": "Song Request Fee"},
+                    "unit_amount": 50  # $0.50 in cents
+                },
+                "quantity": 1
+            }],
+            customer=customer.id,
+            metadata={
+                "request_id": request_id,
+                "full_bid_amount": bid_amount
+            },
+            setup_future_usage="off_session",  # Save card for future billing
+            success_url="https://tally.so/r/mev0Qe",
+            cancel_url="https://tally.so/r/3qvYWY"
+        )
+
+        return redirect(checkout_session.url)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/store-payment-method", methods=["POST"])
 def store_payment_method():
     try:
