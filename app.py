@@ -89,10 +89,12 @@ def start_checkout():
                 "quantity": 1
             }],
             customer=customer.id,
-            metadata={
-                "request_id": request_id
+            payment_intent_data={
+                "setup_future_usage": "off_session",  # ✅ This is the correct placement
+                "metadata": {
+                    "request_id": request_id
+                }
             },
-            setup_future_usage="off_session",  # Save card for future billing
             success_url="https://tally.so/r/mev0Qe",
             cancel_url="https://tally.so/r/3qvYWY"
         )
