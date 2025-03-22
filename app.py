@@ -64,7 +64,7 @@ def setup_intent():
 @app.route('/start-checkout', methods=['GET'])
 def start_checkout():
     request_id = request.args.get('request_id')
-
+    connected_account_id = request.args.get('connect_id')
     if not request_id:
         return jsonify({"error": "Missing request_id"}), 400
 
@@ -93,6 +93,10 @@ def start_checkout():
                 "setup_future_usage": "off_session",  # ✅ This is the correct placement
                 "metadata": {
                     "request_id": request_id
+                },
+                "transfer_data": {
+                    "destination": connected_account_id,
+                    "amount": 40  # 80% of $0.50 = $0.40 (in cents)
                 }
             },
             success_url="https://tally.so/r/mev0Qe",
