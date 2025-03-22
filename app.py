@@ -133,19 +133,21 @@ def charge_customer():
     data = request.json
     customer_id = data.get('customer_id')
     payment_method_id = data.get('bid_payment_method_id')
-    bid_amount = data.get('bid_amount')  # in cents
+    bid_amount = data.get('bid_amount')  # In dollars or cents depending on your frontend
     request_id = data.get('request_id')
-    
-     #convert json from string to float
-    bid_amount_float = float(bid_amount)
-    #convert bid amount to cents
-    bid_amount_cents = int(round(bid_amount_float * 100))
+    connected_account_id = data.get('dj_connect_id')  # ⬅️ Add this field
 
-    if not all([customer_id, payment_method_id,bid_amount_cents]):
+    if not all([customer_id, payment_method_id, bid_amount, connected_account_id]):
         return jsonify({'error': 'Missing data'}), 400
 
     try:
-        # Create the charge
+        # Convert bid amount to cents (if it's a float/dollar value)
+        bid_amount_cents = int(round(float(bid_amount) * 100))
+
+        # Calculate 20% platform fee
+        platform_fee_cents = int(bid_amount_cents * 0.20)
+
+        # Create the off-session charge with transfer to connected account
         payment_intent = stripe.PaymentIntent.create(
             amount=bid_amount_cents,
             currency='usd',
@@ -153,13 +155,20 @@ def charge_customer():
             payment_method=payment_method_id,
             off_session=True,
             confirm=True,
-            metadata={'request_id': request_id}
+            metadata={'request_id': request_id},
+            application_fee_amount=platform_fee_cents,
+            transfer_data={
+                'destination': connected_account_id
+            }
         )
+
         return jsonify({'status': 'success', 'payment_intent': payment_intent.id})
+
     except stripe.error.CardError as e:
         return jsonify({'status': 'failed', 'error': str(e)}), 402
     except Exception as e:
         return jsonify({'status': 'failed', 'error': str(e)}), 500
+
 
 
 
