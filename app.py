@@ -136,6 +136,7 @@ def create_payment_intent():
             setup_future_usage="off_session",  # Allows for later charge
             metadata={"request_id": request_id},
             payment_method_configuration="pmc_1R87WWAk57lRlYLjs1ZdwkyH",
+            automatic_payment_methods={"enabled": True},
             transfer_data={
                 "destination": connected_account_id,
                 "amount": 40  # 80% of 50 cents
