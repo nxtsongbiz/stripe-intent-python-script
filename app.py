@@ -132,7 +132,6 @@ def create_payment_intent():
             amount=50,  # $0.50 in cents (stripe minimum)
             currency="usd",
             customer=customer.id,
-            payment_method_types=["card"],  # Required for wallets
             setup_future_usage="off_session",  # Allows for later charge
             metadata={"request_id": request_id},
             payment_method_configuration="pmc_1R87WWAk57lRlYLjs1ZdwkyH",
