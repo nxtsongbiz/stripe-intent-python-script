@@ -108,6 +108,48 @@ def start_checkout():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/create-payment-intent', methods=['POST'])
+def create_payment_intent():
+    data = request.get_json()
+    request_id = data.get('request_id')
+    email = data.get('email')
+    connected_account_id = data.get('connect_id')
+
+    if not request_id or not connected_account_id:
+        return jsonify({"error": "Missing request_id or connect_id"}), 400
+
+    try:
+        # Step 1: Create Stripe Customer (optional but recommended)
+        customer = stripe.Customer.create(
+            email=email,
+            metadata={"request_id": request_id}
+        )
+
+        # Step 2: Create the PaymentIntent for the $0.25 fee
+        payment_intent = stripe.PaymentIntent.create(
+            amount=25,  # $0.25 in cents
+            currency="usd",
+            customer=customer.id,
+            payment_method_types=["card"],  # Required for wallets
+            setup_future_usage="off_session",  # Allows for later charge
+            metadata={"request_id": request_id},
+            transfer_data={
+                "destination": connected_account_id,
+                "amount": 20  # 80% of 25 cents
+            }
+        )
+
+        # Step 3: Return the info to Make
+        return jsonify({
+            "client_secret": payment_intent.client_secret,
+            "payment_intent_id": payment_intent.id,
+            "customer_id": customer.id
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/store-payment-method", methods=["POST"])
 def store_payment_method():
     try:
