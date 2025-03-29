@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify , redirect
 import stripe
 import os
+import traceback
 
 app = Flask(__name__)
 
@@ -148,6 +149,8 @@ def create_payment_intent():
         })
 
     except Exception as e:
+        print("❌ Exception caught in /create-payment-intent")
+        traceback.print_exc()  #
         return jsonify({"error": str(e)}), 500
 
 @app.route("/store-payment-method", methods=["POST"])
