@@ -134,11 +134,7 @@ def create_payment_intent():
             customer=customer.id,
             payment_method_types=["card"],  # Required for wallets
             setup_future_usage="off_session",  # Allows for later charge
-            metadata={"request_id": request_id},
-            transfer_data={
-                "destination": connected_account_id,
-                "amount": 20  # 80% of 25 cents
-            }
+            metadata={"request_id": request_id}
         )
 
         # Step 3: Return the info to Make
