@@ -127,14 +127,18 @@ def create_payment_intent():
             metadata={"request_id": request_id}
         )
 
-        # Step 2: Create the PaymentIntent for the $0.25 fee
+        # Step 2: Create the PaymentIntent for the $0.50 fee
         payment_intent = stripe.PaymentIntent.create(
-            amount=25,  # $0.25 in cents
+            amount=50,  # $0.50 in cents (stripe minimum)
             currency="usd",
             customer=customer.id,
             payment_method_types=["card"],  # Required for wallets
             setup_future_usage="off_session",  # Allows for later charge
-            metadata={"request_id": request_id}
+            metadata={"request_id": request_id},
+            transfer_data={
+                "destination": connected_account_id,
+                "amount": 40  # 80% of 50 cents
+            }
         )
 
         # Step 3: Return the info to Make
