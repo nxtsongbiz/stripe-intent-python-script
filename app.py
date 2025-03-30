@@ -211,8 +211,12 @@ def charge_customer():
         return jsonify({'status': 'success', 'payment_intent': payment_intent.id})
 
     except stripe.error.CardError as e:
+        print("❌ Exception caught in /charge-customer")
+        traceback.print_exc() 
         return jsonify({'status': 'failed', 'error': str(e)}), 402
     except Exception as e:
+        print("❌ Exception caught in /charge-customer")
+        traceback.print_exc() 
         return jsonify({'status': 'failed', 'error': str(e)}), 500
 
 
