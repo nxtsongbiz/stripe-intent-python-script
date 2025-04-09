@@ -7,10 +7,57 @@ app = Flask(__name__)
 
 # Stripe Secret Key from environment variable
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+# Set your Airtable credentials
+AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
+AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
+AIRTABLE_TABLE_NAME = 'song_requests_tbl'
+AIRTABLE_API_URL = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_NAME}'
+HEADERS = {
+    'Authorization': f'Bearer {AIRTABLE_API_KEY}',
+    'Content-Type': 'application/json'
+}
 
 @app.route("/", methods=["GET"])
 def home():
     return "Stripe SetupIntent API is live!"
+
+
+@app.route('/create-song-request-record', methods=['POST'])
+def create_request():
+    data = request.json
+
+    # Extract form fields
+    song_name = data.get('song_name')
+    artist_name = data.get('artist_name')
+    bid_amount = data.get('bid_amount')
+    phone_number = data.get('phone_number')
+    requestor_name = data.get('requestor_name')
+    shoutout_message = data.get('shoutout_message')
+
+    # Validate
+    if not all([name, email, song_name, bid_amount]):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    # Prepare Airtable data
+    airtable_data = {
+        'fields': {
+            'song_name': song_name,
+            'artist_name': artist_name,
+            'bid_amount': float(bid_amount),
+            'phone_number': phone_number,
+            'requestor_name': requestor_name,
+            'shoutout_message': shoutout_message
+        }
+    }
+
+    # Send to Airtable
+    response = requests.post(AIRTABLE_API_URL, json=airtable_data, headers=HEADERS)
+
+    if response.status_code == 200:
+        record_id = response.json().get('id')
+        return jsonify({'message': 'Request created successfully', 'record_id': record_id}), 200
+    else:
+        return jsonify({'error': 'Failed to create record', 'details': response.text}), 500
 
 @app.route("/setup-intent", methods=["POST"])
 def setup_intent():
