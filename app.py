@@ -35,7 +35,7 @@ def create_request():
     shoutout_message = data.get('shoutout_message')
 
     # Validate
-    if not all([name, email, song_name, bid_amount]):
+    if not all([song_name, bid_amount, phone_number]):
         return jsonify({'error': 'Missing required fields'}), 400
 
     # Prepare Airtable data
