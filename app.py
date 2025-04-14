@@ -73,10 +73,9 @@ def create_payment_intent():
     try:
         # Step 1: Create Stripe Customer (optional but recommended)
         customer = stripe.Customer.create(
-            email=email,
-            metadata={"request_id": request_id}
+            metadata={"request_id": request_id, "phone_number": phone_number}
         )
-
+        
         # Step 2: Create the PaymentIntent for the $0.50 fee
         payment_intent = stripe.PaymentIntent.create(
             amount=50,  # $0.50 in cents (stripe minimum)
