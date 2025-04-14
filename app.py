@@ -3,6 +3,7 @@ from flask_cors import CORS
 import stripe
 import os
 import traceback
+import requests
 
 app = Flask(__name__)
 CORS(app)  # Allow all origins by default
