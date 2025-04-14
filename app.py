@@ -26,43 +26,70 @@ def home():
 
 @app.route('/create-song-request-record', methods=['POST'])
 def create_request():
-    data = request.json
+    try:
+        # Check that environment variables are set
+        if not AIRTABLE_API_KEY or not AIRTABLE_BASE_ID:
+            raise EnvironmentError("Missing Airtable API credentials in environment.")
 
-    # Extract form fields
-    request_id = data.get('request_id')
-    song_name = data.get('song_name')
-    artist_name = data.get('artist_name')
-    bid_amount = data.get('bid_amount')
-    phone_number = data.get('phone_number')
-    requestor_name = data.get('requestor_name')
-    shoutout_message = data.get('shoutout_message')
+        data = request.json
 
-    # Validate
-    if not all([request_id,song_name, bid_amount, phone_number]):
-        return jsonify({'error': 'Missing required fields'}), 400
+        # Extract form fields
+        request_id = data.get('request_id')
+        song_name = data.get('song_name')
+        artist_name = data.get('artist_name')
+        bid_amount = data.get('bid_amount')
+        phone_number = data.get('phone_number')
+        requestor_name = data.get('requestor_name')
+        shoutout_message = data.get('shoutout_message')
 
-    # Prepare Airtable data
-    airtable_data = {
-        'fields': {
-            'request_id': request_id,
-            'song_name': song_name,
-            'artist_name': artist_name,
-            'bid_amount': float(bid_amount),
-            'phone_number': phone_number,
-            'requestor_name': requestor_name,
-            'shoutout_message': shoutout_message
+        # Validate required fields
+        if not all([request_id, song_name, bid_amount, phone_number]):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Attempt to convert bid_amount to float
+        try:
+            bid_amount = float(bid_amount)
+        except ValueError:
+            return jsonify({'error': 'Invalid bid_amount. Must be a number.'}), 400
+
+        # Prepare Airtable payload
+        airtable_data = {
+            'fields': {
+                'request_id': request_id,
+                'song_name': song_name,
+                'artist_name': artist_name,
+                'bid_amount': bid_amount,
+                'phone_number': phone_number,
+                'requestor_name': requestor_name,
+                'shoutout_message': shoutout_message
+            }
         }
-    }
 
-    # Send to Airtable
-    response = requests.post(AIRTABLE_API_URL, json=airtable_data, headers=HEADERS)
+        # Log values for debugging
+        print("Posting to Airtable:")
+        print("URL:", AIRTABLE_API_URL)
+        print("Headers:", HEADERS)
+        print("Payload:", airtable_data)
 
-    if response.status_code == 200:
+        # Send request to Airtable
+        response = requests.post(AIRTABLE_API_URL, json=airtable_data, headers=HEADERS)
+
+        # Raise error if response is not OK
+        response.raise_for_status()
+
         record_id = response.json().get('id')
         return jsonify({'message': 'Request created successfully', 'record_id': record_id}), 200
-    else:
-        traceback.print_exc() 
-        return jsonify({'error': 'Failed to create record', 'details': response.text}), 500
+
+    except requests.exceptions.RequestException as e:
+        print("Airtable API error:")
+        traceback.print_exc()
+        return jsonify({'error': 'Airtable API error', 'details': str(e)}), 500
+
+    except Exception as e:
+        print("General error:")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+
 
 
 @app.route('/create-payment-intent', methods=['POST'])
