@@ -61,6 +61,7 @@ def create_request():
         record_id = response.json().get('id')
         return jsonify({'message': 'Request created successfully', 'record_id': record_id}), 200
     else:
+        traceback.print_exc() 
         return jsonify({'error': 'Failed to create record', 'details': response.text}), 500
 
 
