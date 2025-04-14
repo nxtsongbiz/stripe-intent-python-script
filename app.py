@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify , redirect
+from flask_cors import CORS
 import stripe
 import os
 import traceback
 
 app = Flask(__name__)
-
+CORS(app)  # Allow all origins by default
 # Stripe Secret Key from environment variable
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 # Set your Airtable credentials
