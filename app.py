@@ -105,7 +105,8 @@ def update_request_record():
         payload = {
             "fields": {
                 "customer_id": customer_id,
-                "payment_method_id": payment_method_id
+                "payment_method_id": payment_method_id,
+                "card on file": "YES✅"
             }
         }
 
