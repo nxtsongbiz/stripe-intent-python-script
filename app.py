@@ -90,6 +90,33 @@ def create_request():
         traceback.print_exc()
         return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
+@app.route('/update-request-record', methods=['POST'])
+def update_request_record():
+    try:
+        data = request.json
+        record_id = data.get('record_id')
+        customer_id = data.get('customer_id')
+        payment_method_id = data.get('payment_method_id')
+
+        if not record_id or not customer_id or not payment_method_id:
+            return jsonify({"error": "Missing required fields"}), 400
+
+        airtable_update_url = f"{AIRTABLE_API_URL}/{record_id}"
+        payload = {
+            "fields": {
+                "customer_id": customer_id,
+                "payment_method_id": payment_method_id
+            }
+        }
+
+        response = requests.patch(airtable_update_url, json=payload, headers=HEADERS)
+        response.raise_for_status()
+
+        return jsonify({"message": "Record updated successfully"}), 200
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": "Failed to update Airtable", "details": str(e)}), 500
 
 
 @app.route('/create-payment-intent', methods=['POST'])
