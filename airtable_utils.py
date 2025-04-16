@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import os
 import clicksend_client
@@ -42,7 +42,7 @@ def send_sms_notification(phone_number, song_title):
 
     message = SmsMessage(
         source="python",
-        body=f"🎶 Your song request for '{song_title}' has been accepted! Stick close to the dance floor it's playing soon!",
+        body=f"Your song request for '{song_title}' has been accepted! Stick close to the dance floor it's playing soon!",
         to=phone_number,
         custom_string="NxtSong"
     )
@@ -60,7 +60,7 @@ def mark_as_notified(record_id):
     data = {
         "fields": {
             "notified": True,
-            "notified_at": datetime.utcnow().isoformat()
+            "notified_at": datetime.now(timezone.utc).isoformat()
         }
     }
 
@@ -76,7 +76,7 @@ def check_and_notify():
         for record in records:
             fields = record['fields']
             phone = fields.get('phone_number')
-            song = fields.get('song_title')
+            song = fields.get('song_name')
             record_id = record['id']
 
             if phone and song:
