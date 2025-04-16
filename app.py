@@ -4,6 +4,8 @@ import stripe
 import os
 import traceback
 import requests
+from scheduler import start_scheduler
+import logging
 
 app = Flask(__name__)
 CORS(app)  # Allow all origins by default
@@ -18,6 +20,12 @@ HEADERS = {
     'Authorization': f'Bearer {AIRTABLE_API_KEY}',
     'Content-Type': 'application/json'
 }
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Start the scheduler on app startup
+start_scheduler()
 
 @app.route("/", methods=["GET"])
 def home():
