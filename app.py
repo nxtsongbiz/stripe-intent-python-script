@@ -143,11 +143,12 @@ def create_gig():
         print("Headers:", HEADERS)
         print("Payload:", airtable_data)
 
-        # Send request to Airtable
-        print("Airtable Response:", response.status_code, response.text)
+        
         response = requests.post(AIRTABLE_API_URL_GIGS, json=airtable_data, headers=HEADERS)
 
         # Raise error if response is not OK
+        # Send request to Airtable
+        print("Airtable Response:", response.status_code, response.text)
         response.raise_for_status()
 
         record_id = response.json().get('id')
