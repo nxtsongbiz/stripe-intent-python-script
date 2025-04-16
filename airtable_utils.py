@@ -10,7 +10,7 @@ from clicksend_client.rest import ApiException
 AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
 BASE_ID = os.getenv("AIRTABLE_BASE_ID")
 TABLE_NAME = 'song_requests_tbl'
-VIEW_NAME = 'Accepted'
+VIEW_NAME = 'accepted_view'
 CLICKSEND_API_KEY = os.getenv("CLICKSEND_API_KEY")
 CLICKSEND_USERNAME = os.getenv("CLICKSEND_USERNAME")
 
