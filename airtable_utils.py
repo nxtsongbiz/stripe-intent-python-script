@@ -99,7 +99,7 @@ def check_and_notify():
             try:
                 payload = {
                     "customer_id": customer_id,
-                    "bid_payment_method_id": payment_method_id,
+                    "payment_method_id": payment_method_id,
                     "bid_amount": bid_amount,
                     "request_id": request_id,
                     "dj_connect_id": dj_connect_id
