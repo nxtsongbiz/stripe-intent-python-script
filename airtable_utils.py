@@ -23,7 +23,7 @@ def get_accepted_unnotified_records():
     url = f'https://api.airtable.com/v0/{BASE_ID}/{TABLE_NAME}'
     params = {
         'view': VIEW_NAME,
-        'filterByFormula': "NOT({notified})"
+        'filterByFormula': 'OR({notified} = 0, NOT({notified}))'
     }
 
     response = requests.get(url, headers=HEADERS, params=params)
