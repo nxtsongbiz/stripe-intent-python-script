@@ -177,7 +177,7 @@ def create_payment_intent():
 def charge_customer():
     data = request.json
     customer_id = data.get('customer_id')
-    payment_method_id = data.get('bid_payment_method_id')
+    payment_method_id = data.get('payment_method_id')
     bid_amount = data.get('bid_amount')  # In dollars or cents depending on your frontend
     request_id = data.get('request_id')
     connected_account_id = data.get('dj_connect_id')  # ⬅️ Add this field

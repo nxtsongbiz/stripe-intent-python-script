@@ -13,6 +13,7 @@ TABLE_NAME = 'song_requests_tbl'
 VIEW_NAME = 'accepted_view'
 CLICKSEND_API_KEY = os.getenv("CLICKSEND_API_KEY")
 CLICKSEND_USERNAME = os.getenv("CLICKSEND_USERNAME")
+CHARGE_CUSTOMER_URL = 'https://stripe-intent-python-script.onrender.com/charge-customer'
 
 HEADERS = {
     'Authorization': f'Bearer {AIRTABLE_API_KEY}',
@@ -72,17 +73,59 @@ def check_and_notify():
     logging.info("Running check_and_notify task...")
 
     try:
+        #hardcoded but will be removed when values are revised
+        dj_connect_id = 'acct_1R3XRDPQHqjBAF9t'
         records = get_accepted_unnotified_records()
+        if not records:
+            logging.info("No new accepted records to process.")
+            return
+
         for record in records:
             fields = record['fields']
+            record_id = record['id']
             phone = fields.get('phone_number')
             song = fields.get('song_name')
-            record_id = record['id']
+            customer_id = fields.get('customer_id')
+            payment_method_id = fields.get('payment_method_id')
+            bid_amount = fields.get('bid_amount')  # e.g. "2.50"
+            request_id = fields.get('request_id')
+            
 
-            if phone and song:
+            if not all([phone, song, customer_id, payment_method_id, bid_amount, request_id]):
+                logging.warning(f"Missing data for record {record_id}, skipping.")
+                continue
+
+            # Step 1: Attempt to charge the customer
+            try:
+                payload = {
+                    "customer_id": customer_id,
+                    "bid_payment_method_id": payment_method_id,
+                    "bid_amount": bid_amount,
+                    "request_id": request_id,
+                    "dj_connect_id": dj_connect_id
+                }
+                charge_response = requests.post(CHARGE_CUSTOMER_URL, json=payload)
+                charge_response.raise_for_status()
+                logging.info(f"Charged customer {customer_id} for request {request_id}")
+            except Exception as e:
+                logging.error(f"Charge failed for customer {customer_id}, request {request_id}: {e}")
+                continue  # Skip SMS and update if charge failed
+
+            # Step 2: Send SMS after successful charge
+            try:
                 send_sms_notification(phone, song)
+                logging.info(f"SMS sent to {phone} for song '{song}'")
+            except Exception as e:
+                logging.error(f"Failed to send SMS to {phone}: {e}")
+                continue  # Skip update if SMS fails
+
+            # Step 3: Mark record as notified
+            try:
                 mark_as_notified(record_id)
-            else:
-                logging.warning(f"Missing phone or song for record {record_id}")
+                logging.info(f"Record {record_id} marked as notified.")
+            except Exception as e:
+                logging.error(f"Failed to mark record {record_id} as notified: {e}")
+
     except Exception as e:
         logging.error(f"Error during scheduled check: {e}")
+
