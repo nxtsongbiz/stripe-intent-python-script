@@ -98,6 +98,70 @@ def create_request():
         traceback.print_exc()
         return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
+@app.route('/create-gig-record', methods=['POST'])
+def create_gig():
+    gigs_tbl_name = 'gigs_tbl'
+    AIRTABLE_API_URL_GIGS = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{gigs_tbl_name}'
+    try:
+        # Check that environment variables are set
+        if not AIRTABLE_API_KEY or not AIRTABLE_BASE_ID:
+            raise EnvironmentError("Missing Airtable API credentials in environment.")
+
+        data = request.json
+
+        # Extract form fields
+        gig_id = data.get('gig_id')
+        dj_name = data.get('dj_name')
+        venue = data.get('venue')
+        city = data.get('city')
+        state = data.get('state')
+
+        # Validate required fields
+        if not all([gig_id, venue, city, state]):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        #Generate unique form url for DJ
+        generated_form_url = f'https://tally.so/r/wvKEk4?gig_id={gig_id}&dj_name={dj_name}&venue={venue}&city={city}&state={state}'
+        
+        #Generate qr code url from dj url
+        qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?data={generated_form_url}&size=200x200"
+
+        # Prepare Airtable payload
+        airtable_data = {
+            'fields': {
+                'gig_id': gig_id,
+                'venue': venue,
+                'city': city,
+                'state': state,
+                'gig_url': qr_code_url
+            }
+        }
+
+        # Log values for debugging
+        print("Posting to Airtable:")
+        print("URL:", AIRTABLE_API_URL_GIGS)
+        print("Headers:", HEADERS)
+        print("Payload:", airtable_data)
+
+        # Send request to Airtable
+        response = requests.post(AIRTABLE_API_URL_GIGS, json=airtable_data, headers=HEADERS)
+
+        # Raise error if response is not OK
+        response.raise_for_status()
+
+        record_id = response.json().get('id')
+        return jsonify({'message': 'Request created successfully', 'record_id': record_id}), 200
+
+    except requests.exceptions.RequestException as e:
+        print("Airtable API error:")
+        traceback.print_exc()
+        return jsonify({'error': 'Airtable API error', 'details': str(e)}), 500
+
+    except Exception as e:
+        print("General error:")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+
 @app.route('/update-request-record', methods=['POST'])
 def update_request_record():
     try:
@@ -180,6 +244,7 @@ def charge_customer():
     payment_method_id = data.get('payment_method_id')
     bid_amount = data.get('bid_amount')  # In dollars or cents depending on your frontend
     request_id = data.get('request_id')
+    # field will be removed after adding gig id
     connected_account_id = data.get('dj_connect_id')  # ⬅️ Add this field
 
     if not all([customer_id, payment_method_id, bid_amount, connected_account_id]):
