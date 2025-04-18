@@ -6,6 +6,7 @@ import traceback
 import requests
 from scheduler import start_scheduler
 import logging
+import urllib.parse 
 
 app = Flask(__name__)
 CORS(app)  # Allow all origins by default
@@ -119,12 +120,23 @@ def create_gig():
         # Validate required fields
         if not all([gig_id, venue, city, state]):
             return jsonify({'error': 'Missing required fields'}), 400
+        # ✅ Step 1: Build a dictionary of URL parameters
+        params = {
+            'gig_id': gig_id,
+            'dj_name': dj_name,
+            'venue': venue,
+            'city': city,
+            'state': state
+        }
 
-        #Generate unique form url for DJ
-        generated_form_url = f'https://tally.so/r/wvKEk4?gig_id={gig_id}&dj_name={dj_name}&venue={venue}&city={city}&state={state}'
-        
-        #Generate qr code url from dj url
-        qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?data={generated_form_url}&size=800x800"
+        # ✅ Step 2: URL-encode the parameters safely
+        encoded_params = urllib.parse.urlencode(params)
+
+        # ✅ Step 3: Generate the final Tally form URL
+        generated_form_url = f'https://tally.so/r/wvKEk4?{encoded_params}'
+
+        # ✅ Step 4: Generate QR code URL based on the safe, encoded form URL
+        qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?data={urllib.parse.quote(generated_form_url)}&size=800x800"
 
         # Prepare Airtable payload
         airtable_data = {
