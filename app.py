@@ -251,6 +251,51 @@ def create_payment_intent():
         traceback.print_exc()  #
         return jsonify({"error": str(e)}), 500
 
+@app.route('/lookup-dj-connect-id', methods=['POST'])
+def lookup_dj_connect_id():
+    try:
+        data = request.json
+        gig_id = data.get('gig_id')
+
+        if not gig_id:
+            return jsonify({'error': 'Missing gig_id'}), 400
+
+        # Search the gigs_tbl where gig_id matches
+        search_url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/gigs_tbl"
+        headers = {
+            "Authorization": f"Bearer {AIRTABLE_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        params = {
+            "filterByFormula": f"gig_id='{gig_id}'",
+            "maxRecords": 1
+        }
+
+        response = requests.get(search_url, headers=headers, params=params)
+        response.raise_for_status()
+
+        records = response.json().get('records', [])
+        if not records:
+            return jsonify({'error': 'No matching gig found'}), 404
+
+        fields = records[0]['fields']
+        connect_id = fields.get('stripe_connect_id')  # <-- assumes your Airtable has a field "stripe_connect_id"
+
+        if not connect_id:
+            return jsonify({'error': 'No stripe_connect_id found for gig'}), 404
+
+        return jsonify({'connect_id': connect_id})
+
+    except requests.exceptions.RequestException as e:
+        print("❌ Airtable API error:")
+        traceback.print_exc()
+        return jsonify({'error': 'Airtable API error', 'details': str(e)}), 500
+
+    except Exception as e:
+        print("❌ General error:")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+
 
 #once bid is accepted customer is charged full amount
 @app.route('/charge-customer', methods=['POST'])
