@@ -69,12 +69,40 @@ def mark_as_notified(record_id):
     response.raise_for_status()
     logging.info(f"Marked record {record_id} as notified.")
 
+def lookup_connect_id_by_gig_id(gig_id):
+    """
+    Helper function to lookup the DJ's Stripe connect ID based on gig_id.
+    """
+    search_url = f"https://api.airtable.com/v0/{BASE_ID}/gigs_tbl"
+    headers = {
+        "Authorization": f"Bearer {AIRTABLE_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    params = {
+        "filterByFormula": f"gig_id='{gig_id}'",
+        "maxRecords": 1
+    }
+
+    response = requests.get(search_url, headers=headers, params=params)
+    response.raise_for_status()
+
+    records = response.json().get('records', [])
+    if not records:
+        raise ValueError(f"No gig found for gig_id: {gig_id}")
+
+    fields = records[0]['fields']
+    connect_id = fields.get('stripe_connect_id')
+
+    if not connect_id:
+        raise ValueError(f"No stripe_connect_id found for gig_id: {gig_id}")
+
+    return connect_id
+
+
 def check_and_notify():
     logging.info("Running check_and_notify task...")
 
     try:
-        #hardcoded but will be removed when values are revised
-        dj_connect_id = 'acct_1R3XRDPQHqjBAF9t'
         records = get_accepted_unnotified_records()
         if not records:
             logging.info("No new accepted records to process.")
@@ -89,10 +117,17 @@ def check_and_notify():
             payment_method_id = fields.get('payment_method_id')
             bid_amount = fields.get('bid_amount')  # e.g. "2.50"
             request_id = fields.get('request_id')
-            
+            gig_id = fields.get('gig_id')  # 🆕 We now use gig_id from the song request record
 
-            if not all([phone, song, customer_id, payment_method_id, bid_amount, request_id]):
+            if not all([phone, song, customer_id, payment_method_id, bid_amount, request_id, gig_id]):
                 logging.warning(f"Missing data for record {record_id}, skipping.")
+                continue
+
+            # 🆕 Lookup DJ connect ID dynamically
+            try:
+                dj_connect_id = lookup_connect_id_by_gig_id(gig_id)
+            except Exception as e:
+                logging.error(f"Failed to lookup connect ID for gig_id {gig_id}: {e}")
                 continue
 
             # Step 1: Attempt to charge the customer
@@ -128,4 +163,3 @@ def check_and_notify():
 
     except Exception as e:
         logging.error(f"Error during scheduled check: {e}")
-
