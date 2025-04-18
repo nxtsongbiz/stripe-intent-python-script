@@ -44,6 +44,7 @@ def create_request():
 
         # Extract form fields
         request_id = data.get('request_id')
+        gig_id = data.get('gig_id')
         song_name = data.get('song_name')
         artist_name = data.get('artist_name')
         bid_amount = data.get('bid_amount')
@@ -52,7 +53,7 @@ def create_request():
         shoutout_message = data.get('shoutout_message')
 
         # Validate required fields
-        if not all([request_id, song_name, bid_amount, phone_number]):
+        if not all([request_id, gig_id, song_name, bid_amount, phone_number]):
             return jsonify({'error': 'Missing required fields'}), 400
 
         # Attempt to convert bid_amount to float
@@ -65,6 +66,7 @@ def create_request():
         airtable_data = {
             'fields': {
                 'request_id': request_id,
+                'gig_id': gig_id,
                 'song_name': song_name,
                 'artist_name': artist_name,
                 'bid_amount': bid_amount,
