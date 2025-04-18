@@ -124,7 +124,7 @@ def create_gig():
         generated_form_url = f'https://tally.so/r/wvKEk4?gig_id={gig_id}&dj_name={dj_name}&venue={venue}&city={city}&state={state}'
         
         #Generate qr code url from dj url
-        qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?data={generated_form_url}&size=200x200"
+        qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?data={generated_form_url}&size=800x800"
 
         # Prepare Airtable payload
         airtable_data = {
