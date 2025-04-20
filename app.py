@@ -231,7 +231,7 @@ def create_payment_intent():
             customer=customer.id,
             setup_future_usage="off_session",  # Allows for later charge
             metadata={"request_id": request_id},
-            payment_method_configuration="pmc_1R87WWAk57lRlYLjs1ZdwkyH",
+            payment_method_configuration="pmc_1RFqwcAk57lRlYLjGFB9Snvy",
             automatic_payment_methods={"enabled": True},
             transfer_data={
                 "destination": connected_account_id,
