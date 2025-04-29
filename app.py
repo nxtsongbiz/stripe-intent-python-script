@@ -32,6 +32,115 @@ start_scheduler()
 def home():
     return "Stripe SetupIntent API is live!"
 
+# 🛜 Step 1: When offer is submitted, create SetupIntent
+@app.route('/create-setup-intent', methods=['POST'])
+def create_setup_intent():
+    data = request.get_json()
+
+    customer_name = data.get('customer_name')
+    email = data.get('email')
+    phone_number = data.get('phone_number')
+    offer_id = data.get('offer_id')
+
+    # 1️⃣ Create Stripe Customer
+    customer = stripe.Customer.create(
+        email=email,
+        name=customer_name,
+        phone=phone_number,
+        metadata={"offer_id": offer_id}
+    )
+
+    # 2️⃣ Create SetupIntent to save card (no charge yet)
+    setup_intent = stripe.SetupIntent.create(
+        customer=customer.id,
+        payment_method_types=["card"],
+        usage="off_session"
+    )
+
+    # 3️⃣ Create Airtable customer record (calls your internal method)
+    try:
+        airtable_payload = {
+            "stripe_id": customer.id,
+            "customer_name": customer_name,
+            "email": email,
+            "phone_number": phone_number
+        }
+
+        airtable_response = requests.post(
+            f"{request.host_url.rstrip('/')}/create-booking-customer-record",
+            json=airtable_payload
+        )
+
+        if airtable_response.status_code != 200:
+            print("Airtable creation failed:", airtable_response.json())
+
+    except Exception as e:
+        print("Error posting to Airtable:", str(e))
+
+    return jsonify({
+        "clientSecret": setup_intent.client_secret,
+        "customer_id": customer.id
+    })
+
+    
+@app.route('/create-booking-customer-record', methods=['POST'])
+def create_customer_record():
+    customers_tbl_name = 'customers_tbl'
+    AIRTABLE_API_URL_CUSTOMERS = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{customers_tbl_name}'
+    
+    try:
+        # Check that environment variables are set
+        if not AIRTABLE_API_KEY or not AIRTABLE_BASE_ID:
+            raise EnvironmentError("Missing Airtable API credentials in environment.")
+
+        data = request.json
+
+        # Extract form fields
+        stripe_id = data.get('stripe_id')
+        customer_name = data.get('customer_name')
+        email = data.get('email')
+        phone_number = data.get('phone_number')
+
+        # Validate required fields
+        if not all([stripe_id, customer_name, email, phone_number]):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+       
+        # Prepare Airtable payload
+        airtable_data = {
+            'fields': {
+                'stripe_id': stripe_id,
+                'customer_name': customer_name,
+                'email': email,
+                'phone_number': phone_number
+            }
+        }
+
+        # Log values for debugging
+        print("Posting to Airtable:")
+        print("URL:", AIRTABLE_API_URL_CUSTOMERS)
+        print("Headers:", HEADERS)
+        print("Payload:", airtable_data)
+
+        # Send request to Airtable
+        response = requests.post(AIRTABLE_API_URL_CUSTOMERS, json=airtable_data, headers=HEADERS)
+
+        # Raise error if response is not OK
+        response.raise_for_status()
+
+        record_id = response.json().get('id')
+        return jsonify({'message': 'Request created successfully', 'record_id': record_id}), 200
+
+    except requests.exceptions.RequestException as e:
+        print("Airtable API error:")
+        traceback.print_exc()
+        return jsonify({'error': 'Airtable API error', 'details': str(e)}), 500
+
+    except Exception as e:
+        print("General error:")
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+
 
 @app.route('/create-song-request-record', methods=['POST'])
 def create_request():
