@@ -12,6 +12,7 @@ app = Flask(__name__)
 CORS(app)  # Allow all origins by default
 # Stripe Secret Key from environment variable
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
 # Set your Airtable credentials
 AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
 AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
