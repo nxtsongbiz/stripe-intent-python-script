@@ -80,6 +80,7 @@ def create_setup_intent():
 
     return jsonify({
         "clientSecret": setup_intent.client_secret,
+        "publishableKey": STRIPE_PUBLISHABLE_KEY, 
         "customer_id": customer.id
     })
 
