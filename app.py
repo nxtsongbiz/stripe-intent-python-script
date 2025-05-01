@@ -46,8 +46,7 @@ def create_setup_intent():
         offer_id = data.get('offer_id')
 
         if not all([customer_name, email, phone_number, offer_id]):
-            logging.error("❌ Missing required fields: name=%s, email=%s, phone=%s, offer_id=%s",
-                          customer_name, email, phone_number, offer_id)
+            logging.error("❌ Missing required fields.")
             return jsonify({'error': 'Missing required fields.'}), 400
 
         # 1️⃣ Create Stripe Customer
@@ -58,7 +57,7 @@ def create_setup_intent():
             phone=phone_number,
             metadata={"offer_id": offer_id}
         )
-        logging.info("✅ Stripe Customer created:\n%s", customer)
+        logging.info("✅ Stripe customer created: %s", customer)
 
         # 2️⃣ Create SetupIntent
         logging.info("💳 Creating SetupIntent...")
@@ -67,40 +66,34 @@ def create_setup_intent():
             payment_method_types=["card"],
             usage="off_session"
         )
-        logging.info("✅ SetupIntent created:\n%s", setup_intent)
+        logging.info("✅ SetupIntent created: %s", setup_intent)
 
-        # 3️⃣ Send customer info to Airtable
-        airtable_payload = {
-            "stripe_id": customer.id,
-            "customer_name": customer_name,
-            "email": email,
-            "phone_number": phone_number
-        }
+        # 3️⃣ Create Airtable record directly
+        record_id = None
+        try:
+            airtable_result = create_airtable_customer_record(
+                stripe_id=customer.id,
+                customer_name=customer_name,
+                email=email,
+                phone_number=phone_number
+            )
+            record_id = airtable_result.get("id")
+            logging.info("🧾 Airtable record ID: %s", record_id)
+        except Exception as e:
+            logging.warning("⚠️ Airtable record creation failed: %s", str(e))
 
-        logging.info("📤 Posting customer to Airtable: %s", airtable_payload)
-
-        airtable_response = requests.post(
-            f"{request.host_url.rstrip('/')}/create-booking-customer-record",
-            json=airtable_payload
-        )
-
-        if airtable_response.status_code != 200:
-            logging.warning("⚠️ Airtable creation failed:\n%s", airtable_response.text)
-        else:
-            logging.info("✅ Airtable record created: %s", airtable_response.json())
-
-        # 4️⃣ Return SetupIntent details to frontend
+        # 4️⃣ Return all setup intent data (including Airtable record if available)
         response_payload = {
             "clientSecret": setup_intent.client_secret,
             "publishableKey": STRIPE_PUBLISHABLE_KEY,
             "customer_id": customer.id
         }
 
-        logging.info("📦 Returning response to frontend: %s", response_payload)
+        logging.info("📦 Returning setup response: %s", response_payload)
         return jsonify(response_payload)
 
     except stripe.error.StripeError as e:
-        logging.error("❌ Stripe API error occurred: %s", e.user_message)
+        logging.error("❌ Stripe error: %s", e.user_message)
         logging.error("🔎 Stripe error details: %s", e.json_body)
         return jsonify({
             "error": "Stripe error",
@@ -109,70 +102,35 @@ def create_setup_intent():
         }), 400
 
     except Exception as e:
-        logging.error("🔥 Unexpected exception:", exc_info=True)
+        logging.error("🔥 Internal server error:", exc_info=True)
         return jsonify({
             "error": "Internal server error",
             "details": str(e)
         }), 500
+   
+def create_airtable_customer_record(stripe_id, customer_name, email, phone_number):
+    CUSTOMER_TABLE_NAME = 'customers_tbl'
+    AIRTABLE_API_CUSTOMER_URL = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{CUSTOMER_TABLE_NAME}'
+    if not AIRTABLE_API_KEY or not AIRTABLE_BASE_ID:
+        raise EnvironmentError("Missing Airtable API credentials in environment.")
 
-    
-@app.route('/create-booking-customer-record', methods=['POST'])
-def create_customer_record():
-    customers_tbl_name = 'customers_tbl'
-    AIRTABLE_API_URL_CUSTOMERS = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{customers_tbl_name}'
-    
-    try:
-        # Check that environment variables are set
-        if not AIRTABLE_API_KEY or not AIRTABLE_BASE_ID:
-            raise EnvironmentError("Missing Airtable API credentials in environment.")
-
-        data = request.json
-
-        # Extract form fields
-        stripe_id = data.get('stripe_id')
-        customer_name = data.get('customer_name')
-        email = data.get('email')
-        phone_number = data.get('phone_number')
-
-        # Validate required fields
-        if not all([stripe_id, customer_name, email, phone_number]):
-            return jsonify({'error': 'Missing required fields'}), 400
-
-       
-        # Prepare Airtable payload
-        airtable_data = {
-            'fields': {
-                'stripe_id': stripe_id,
-                'customer_name': customer_name,
-                'email': email,
-                'phone_number': phone_number
-            }
+    airtable_data = {
+        'fields': {
+            'stripe_id': stripe_id,
+            'customer_name': customer_name,
+            'email': email,
+            'phone_number': phone_number
         }
+    }
 
-        # Log values for debugging
-        print("Posting to Airtable:")
-        print("URL:", AIRTABLE_API_URL_CUSTOMERS)
-        print("Headers:", HEADERS)
-        print("Payload:", airtable_data)
+    logging.info("📤 Posting Airtable payload: %s", airtable_data)
 
-        # Send request to Airtable
-        response = requests.post(AIRTABLE_API_URL_CUSTOMERS, json=airtable_data, headers=HEADERS)
+    response = requests.post(AIRTABLE_API_CUSTOMER_URL, json=airtable_data, headers=HEADERS)
+    response.raise_for_status()
 
-        # Raise error if response is not OK
-        response.raise_for_status()
+    logging.info("✅ Airtable record created: %s", response.json())
+    return response.json()
 
-        record_id = response.json().get('id')
-        return jsonify({'message': 'Request created successfully', 'record_id': record_id}), 200
-
-    except requests.exceptions.RequestException as e:
-        print("Airtable API error:")
-        traceback.print_exc()
-        return jsonify({'error': 'Airtable API error', 'details': str(e)}), 500
-
-    except Exception as e:
-        print("General error:")
-        traceback.print_exc()
-        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
 
 @app.route('/create-song-request-record', methods=['POST'])
