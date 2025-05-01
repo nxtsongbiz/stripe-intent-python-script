@@ -36,30 +36,40 @@ def home():
 # 🛜 Step 1: When offer is submitted, create SetupIntent
 @app.route('/create-setup-intent', methods=['POST'])
 def create_setup_intent():
-    data = request.get_json()
-
-    customer_name = data.get('customer_name')
-    email = data.get('email')
-    phone_number = data.get('phone_number')
-    offer_id = data.get('offer_id')
-
-    # 1️⃣ Create Stripe Customer
-    customer = stripe.Customer.create(
-        email=email,
-        name=customer_name,
-        phone=phone_number,
-        metadata={"offer_id": offer_id}
-    )
-
-    # 2️⃣ Create SetupIntent to save card (no charge yet)
-    setup_intent = stripe.SetupIntent.create(
-        customer=customer.id,
-        payment_method_types=["card"],
-        usage="off_session"
-    )
-
-    # 3️⃣ Create Airtable customer record (calls your internal method)
     try:
+        data = request.get_json()
+        logging.info("📥 Received request data: %s", data)
+
+        customer_name = data.get('customer_name')
+        email = data.get('email')
+        phone_number = data.get('phone_number')
+        offer_id = data.get('offer_id')
+
+        if not all([customer_name, email, phone_number, offer_id]):
+            logging.error("❌ Missing required fields: name=%s, email=%s, phone=%s, offer_id=%s",
+                          customer_name, email, phone_number, offer_id)
+            return jsonify({'error': 'Missing required fields.'}), 400
+
+        # 1️⃣ Create Stripe Customer
+        logging.info("👤 Creating Stripe customer...")
+        customer = stripe.Customer.create(
+            email=email,
+            name=customer_name,
+            phone=phone_number,
+            metadata={"offer_id": offer_id}
+        )
+        logging.info("✅ Stripe Customer created:\n%s", customer)
+
+        # 2️⃣ Create SetupIntent
+        logging.info("💳 Creating SetupIntent...")
+        setup_intent = stripe.SetupIntent.create(
+            customer=customer.id,
+            payment_method_types=["card"],
+            usage="off_session"
+        )
+        logging.info("✅ SetupIntent created:\n%s", setup_intent)
+
+        # 3️⃣ Send customer info to Airtable
         airtable_payload = {
             "stripe_id": customer.id,
             "customer_name": customer_name,
@@ -67,22 +77,43 @@ def create_setup_intent():
             "phone_number": phone_number
         }
 
+        logging.info("📤 Posting customer to Airtable: %s", airtable_payload)
+
         airtable_response = requests.post(
             f"{request.host_url.rstrip('/')}/create-booking-customer-record",
             json=airtable_payload
         )
 
         if airtable_response.status_code != 200:
-            print("Airtable creation failed:", airtable_response.json())
+            logging.warning("⚠️ Airtable creation failed:\n%s", airtable_response.text)
+        else:
+            logging.info("✅ Airtable record created: %s", airtable_response.json())
+
+        # 4️⃣ Return SetupIntent details to frontend
+        response_payload = {
+            "clientSecret": setup_intent.client_secret,
+            "publishableKey": STRIPE_PUBLISHABLE_KEY,
+            "customer_id": customer.id
+        }
+
+        logging.info("📦 Returning response to frontend: %s", response_payload)
+        return jsonify(response_payload)
+
+    except stripe.error.StripeError as e:
+        logging.error("❌ Stripe API error occurred: %s", e.user_message)
+        logging.error("🔎 Stripe error details: %s", e.json_body)
+        return jsonify({
+            "error": "Stripe error",
+            "message": e.user_message,
+            "details": e.json_body
+        }), 400
 
     except Exception as e:
-        print("Error posting to Airtable:", str(e))
-
-    return jsonify({
-        "clientSecret": setup_intent.client_secret,
-        "publishableKey": STRIPE_PUBLISHABLE_KEY, 
-        "customer_id": customer.id
-    })
+        logging.error("🔥 Unexpected exception:", exc_info=True)
+        return jsonify({
+            "error": "Internal server error",
+            "details": str(e)
+        }), 500
 
     
 @app.route('/create-booking-customer-record', methods=['POST'])
