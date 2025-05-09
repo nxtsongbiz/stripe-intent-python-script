@@ -6,7 +6,9 @@ import traceback
 import requests
 from scheduler import start_scheduler
 import logging
-import urllib.parse 
+import urllib.parse
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
 
 app = Flask(__name__)
 CORS(app)  # Allow all origins by default
@@ -17,6 +19,7 @@ STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
 AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
 AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
 AIRTABLE_TABLE_NAME = 'song_requests_tbl'
+geolocator = Nominatim(user_agent="dj_locator")
 AIRTABLE_API_URL = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_NAME}'
 HEADERS = {
     'Authorization': f'Bearer {AIRTABLE_API_KEY}',
@@ -131,6 +134,25 @@ def create_airtable_customer_record(stripe_id, customer_name, email, phone_numbe
     logging.info("✅ Airtable record created: %s", response.json())
     return response.json()
 
+#GEOCODE ZIP CODE OR CITY,STATE IN ORDER TO GET COORDINATES
+def get_coordinates(city=None, state=None, zip_code=None):
+    try:
+        if zip_code:
+            query = zip_code
+        elif city and state:
+            query = f"{city}, {state}"
+        else:
+            raise ValueError("Either ZIP code or both city and state must be provided.")
+
+        location = geolocator.geocode(query, timeout=10)
+
+        if not location:
+            raise LookupError(f"Could not find coordinates for: {query}")
+
+        return (location.latitude, location.longitude)
+
+    except GeocoderTimedOut:
+        raise TimeoutError("Geocoding service timed out. Please try again.")
 
 
 @app.route('/create-song-request-record', methods=['POST'])
@@ -446,6 +468,6 @@ def charge_customer():
 
 
 
-
+#8080 for test bc 5000 is taken on mac
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
