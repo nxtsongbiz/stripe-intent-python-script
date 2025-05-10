@@ -10,7 +10,7 @@ import urllib.parse
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
 
-#new code
+#updated virtual environment to correct one
 app = Flask(__name__)
 CORS(app)  # Allow all origins by default
 # Stripe Secret Key from environment variable
